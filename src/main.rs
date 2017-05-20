@@ -240,3 +240,22 @@ fn main() {
 
     //println!("Hello world");
 }
+
+
+#[cfg(test)]
+mod Bmp085Test
+{
+    use super::*;
+
+    #[test]
+    fn real_value_calculation()
+    {
+        let params = Bmp085Parameters::default();
+
+        let ut = 27898;
+        let up = 23843;
+
+        assert_eq!(params.calculate_real_temp(ut), 150);
+        assert_eq!(params.calcuate_real_pressure(ut, up), 69965);
+    }
+}
