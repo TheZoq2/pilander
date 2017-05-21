@@ -5,3 +5,5 @@ authors = ["TheZoq2 <frans.skarman@gmail.com>"]
 
 [dependencies]
 i2cdev = "*"
+
+nalgebra = "*"

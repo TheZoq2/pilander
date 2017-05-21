@@ -1,7 +1,7 @@
 use i2cdev::core::*;
 use i2cdev::linux::{LinuxI2CDevice, LinuxI2CError};
 
-use i2c_helpers::{read_i16_i2c, read_u16_i2c};
+use i2c_helpers::{read_i16_i2c_little_endian, read_u16_i2c_little_endian};
 
 use std::thread;
 use std::time::Duration;
@@ -116,17 +116,17 @@ impl Bmp085
     pub fn init(mut device: LinuxI2CDevice) -> Result<Bmp085, LinuxI2CError>
     {
         //Read all the callibration values
-        let ac1 = try!(read_i16_i2c(&mut device, 0xAA));
-        let ac2 = try!(read_i16_i2c(&mut device, 0xAC));
-        let ac3 = try!(read_i16_i2c(&mut device, 0xAE));
-        let ac4 = try!(read_u16_i2c(&mut device, 0xB0));
-        let ac5 = try!(read_u16_i2c(&mut device, 0xB2));
-        let ac6 = try!(read_u16_i2c(&mut device, 0xB4));
-        let b1 = try!(read_i16_i2c(&mut device, 0xB6));
-        let b2 = try!(read_i16_i2c(&mut device, 0xB8));
-        let mb = try!(read_i16_i2c(&mut device, 0xBA));
-        let mc = try!(read_i16_i2c(&mut device, 0xBC));
-        let md = try!(read_i16_i2c(&mut device, 0xBE));
+        let ac1 = try!(read_i16_i2c_little_endian(&mut device, 0xAA));
+        let ac2 = try!(read_i16_i2c_little_endian(&mut device, 0xAC));
+        let ac3 = try!(read_i16_i2c_little_endian(&mut device, 0xAE));
+        let ac4 = try!(read_u16_i2c_little_endian(&mut device, 0xB0));
+        let ac5 = try!(read_u16_i2c_little_endian(&mut device, 0xB2));
+        let ac6 = try!(read_u16_i2c_little_endian(&mut device, 0xB4));
+        let b1 = try!(read_i16_i2c_little_endian(&mut device, 0xB6));
+        let b2 = try!(read_i16_i2c_little_endian(&mut device, 0xB8));
+        let mb = try!(read_i16_i2c_little_endian(&mut device, 0xBA));
+        let mc = try!(read_i16_i2c_little_endian(&mut device, 0xBC));
+        let md = try!(read_i16_i2c_little_endian(&mut device, 0xBE));
 
         Ok(
             Bmp085 {
@@ -162,7 +162,7 @@ impl Bmp085
         // Wait for the device to read the data
         thread::sleep(Duration::from_millis(5));
 
-        read_u16_i2c(&mut self.device, 0xf6)
+        read_u16_i2c_little_endian(&mut self.device, 0xf6)
     }
 
     pub fn read_uncompensated_pressure(&mut self) -> Result<u32, LinuxI2CError>

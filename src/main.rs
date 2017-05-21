@@ -1,4 +1,5 @@
 extern crate i2cdev;
+extern crate nalgebra as na;
 
 use std::thread;
 use std::time::Duration;
@@ -12,6 +13,7 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 
 mod bmp085;
+mod bno055;
 mod i2c_helpers;
 
 pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
@@ -73,13 +75,29 @@ pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
     }
 }
 
+fn test_bno()
+{
+    let bno_addr = 0x28;
+
+    let bno_device = LinuxI2CDevice::new("/dev/i2c-1", bno_addr).unwrap();
+    let mut bno = bno055::Bno055::new(bno_device).unwrap();
+
+    println!("Bno id: {:X}", bno.get_chip_id().unwrap());
+    println!("Bno status: {:?}", bno.get_system_status().unwrap());
+
+    loop {
+        println!("{:?}", bno.get_gravity_vector().unwrap());
+        thread::sleep(Duration::from_millis(100))
+    }
+}
+
 fn main() {
-    let sensor_addr = 0x77;
+    let bmp_addr = 0x77;
 
-    let device = LinuxI2CDevice::new("/dev/i2c-1", sensor_addr).unwrap();
+    let bmp_i2c = LinuxI2CDevice::new("/dev/i2c-1", bmp_addr).unwrap();
 
-    let bmp085 = bmp085::Bmp085::init(device).unwrap();
+    let mut bmp = bmp085::Bmp085::init(bmp_i2c).unwrap();
 
-    pressure_logger(bmp085);
+    pressure_logger(bmp);
 }
 
