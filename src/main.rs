@@ -80,8 +80,10 @@ fn test_bno()
     let bno_device = LinuxI2CDevice::new("/dev/i2c-1", bno_addr).unwrap();
     let mut bno = bno055::Bno055::new(bno_device).unwrap();
 
-    println!("Bno id: {:X}", bno.get_chip_id().unwrap());
-    println!("Bno status: {:?}", bno.get_system_status().unwrap());
+    println!("Bno id: 0x{:X}", bno.get_chip_id().unwrap());
+    println!("accel rev: 0x{:X}", bno.get_accel_rev_id().unwrap());
+    let status = bno.get_system_status().unwrap();
+    println!("Bno status: 0x{:X}, {:?}", status.status, status.error);
 
     loop {
         println!("{:?}", bno.get_gravity_vector().unwrap());
@@ -96,6 +98,7 @@ fn main() {
 
     let mut bmp = bmp085::Bmp085::init(bmp_i2c).unwrap();
 
-    pressure_logger(bmp);
+    test_bno();
+    //pressure_logger(bmp);
 }
 

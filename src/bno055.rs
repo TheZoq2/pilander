@@ -29,7 +29,7 @@ use i2c_helpers;
 pub struct Bno055Status
 {
     pub status: u8,
-    pub error: u8
+    pub error: Option<u8>
 }
 
 pub struct Bno055
@@ -76,7 +76,6 @@ impl Bno055
 
     pub fn new(mut i2c_device: LinuxI2CDevice) -> Result<Bno055, LinuxI2CError>
     {
-        /*
         //Send a reset command
         i2c_device.smbus_write_byte_data(SYS_TRIGGER_ADDR, 0x20);
         thread::sleep(Duration::from_millis(1000));
@@ -93,7 +92,6 @@ impl Bno055
 
         i2c_device.smbus_write_byte_data(OPR_MODE_REG, MODE_NDOF);
         thread::sleep(Duration::from_millis(20));
-        */
 
         Ok (Bno055 {
             i2c_device
@@ -105,6 +103,11 @@ impl Bno055
         self.i2c_device.smbus_read_byte_data(0x00)
     }
 
+    pub fn get_accel_rev_id(&mut self) -> Result<u8, LinuxI2CError>
+    {
+        self.i2c_device.smbus_read_byte_data(0x01)
+    }
+
     pub fn get_gravity_vector(&mut self) -> Result<na::Vector3<i16>, LinuxI2CError>
     {
         self.read_vector3(GRAVITY_VECTOR_REG)
@@ -112,11 +115,19 @@ impl Bno055
 
     pub fn get_system_status(&mut self) -> Result<Bno055Status, LinuxI2CError>
     {
+        let status = self.i2c_device.smbus_read_byte_data(SYSTEM_STATUS_ADDR)?;
+
+        let error = if status == 0x01 {
+            Some(self.i2c_device.smbus_read_byte_data(SYSTEM_ERROR_ADDR)?)
+        }
+        else {
+            None
+        };
         Ok (
             Bno055Status
             {
-                status: self.i2c_device.smbus_read_byte_data(SYSTEM_STATUS_ADDR)?,
-                error: self.i2c_device.smbus_read_byte_data(SYSTEM_ERROR_ADDR)?,
+                status,
+                error
             }
         )
     }
