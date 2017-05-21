@@ -51,9 +51,7 @@ pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
         let altitude = bmp085::altitude_from_pressure(pressure, reference_pressure);
         let avg_altitude = bmp085::altitude_from_pressure(average, reference_pressure);
 
-        thread::sleep(Duration::from_millis(50));
-
-        let result_string = format!("{}\"p\": {}, \"avg_\"p: {}, \"al\"t: {}, \"avg_alt\":{}{},", 
+        let result_string = format!("{}\"p\": {}, \"avg_t\": {}, \"alt\": {}, \"avg_alt\":{}{},",
                         "{",
                         pressure,
                         average,
