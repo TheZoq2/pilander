@@ -9,24 +9,33 @@ use i2cdev::linux::{LinuxI2CDevice, LinuxI2CError};
 fn read_i16_i2c(i2c_device: &mut LinuxI2CDevice, memory_address: u8)
         -> Result<i16, LinuxI2CError>
 {
-    let mut buff = [0;2];
-
     try!(i2c_device.write(&[memory_address]));
     let msb = try!(i2c_device.smbus_read_byte());
     let lsb = try!(i2c_device.smbus_read_byte());
 
-    Ok((msb as i16)<<8 | lsb as i16)
+    Ok((((msb as u16)<<8) | lsb as u16) as i16)
+}
+
+fn read_u16_i2c(i2c_device: &mut LinuxI2CDevice, memory_address: u8) -> Result<u16, LinuxI2CError>
+{
+    try!(i2c_device.write(&[memory_address]));
+    let msb = try!(i2c_device.smbus_read_byte());
+    let lsb = try!(i2c_device.smbus_read_byte());
+
+    Ok(((msb as u16)<<8) | lsb as u16)
 }
 
 /**
   Note that these functions are a bit off when calculating absolute values for pressure
  */
+#[derive(Debug)]
 struct Bmp085Parameters
 {
-    //Oversampling settings
+    // Oversampling settings. Should be between 0 and 3. 0 Seems to return
+    // incorrect values
     pub oversampling: u8,
 
-    //Calibration values
+    // Calibration values
     pub ac1: i16,
     pub ac2: i16,
     pub ac3: i16,
@@ -46,7 +55,7 @@ impl Bmp085Parameters
     {
         Bmp085Parameters
         {
-            oversampling: 0,
+            oversampling: 1,
 
             ac1: 408,
             ac2: -72,
@@ -129,9 +138,9 @@ impl Bmp085
         let ac1 = try!(read_i16_i2c(&mut device, 0xAA));
         let ac2 = try!(read_i16_i2c(&mut device, 0xAC));
         let ac3 = try!(read_i16_i2c(&mut device, 0xAE));
-        let ac4 = try!(device.smbus_read_word_data(0xB0));
-        let ac5 = try!(device.smbus_read_word_data(0xB2));
-        let ac6 = try!(device.smbus_read_word_data(0xB4));
+        let ac4 = try!(read_u16_i2c(&mut device, 0xB0));
+        let ac5 = try!(read_u16_i2c(&mut device, 0xB2));
+        let ac6 = try!(read_u16_i2c(&mut device, 0xB4));
         let b1 = try!(read_i16_i2c(&mut device, 0xB6));
         let b2 = try!(read_i16_i2c(&mut device, 0xB8));
         let mb = try!(read_i16_i2c(&mut device, 0xBA));
@@ -144,7 +153,9 @@ impl Bmp085
 
                 params: Bmp085Parameters
                 {
-                    oversampling: 0,
+                    // For some reason, oversampling=0 does not give the correct
+                    // pressure value
+                    oversampling: 1,
 
                     ac1,
                     ac2,
@@ -170,11 +181,7 @@ impl Bmp085
         // Wait for the device to read the data
         thread::sleep(Duration::from_millis(5));
 
-        //self.device.smbus_read_word_data(0xf6)
-        let msb = try!(self.device.smbus_read_byte_data(0xf6));
-        let lsb = try!(self.device.smbus_read_byte_data(0xf7));
-
-        Ok(((msb as u16) << 8) + (lsb as u16))
+        read_u16_i2c(&mut self.device, 0xf6)
     }
 
     pub fn read_uncompensated_pressure(&mut self) -> Result<u32, LinuxI2CError>
@@ -192,13 +199,9 @@ impl Bmp085
         let lsb = try!(self.device.smbus_read_byte());
         let xlsb = try!(self.device.smbus_read_byte());
 
-        Ok(((msb as u32) << 16) | ((lsb as u32) << 8) | ((xlsb as u32) >> (8-self.params.oversampling as u32)))
+        Ok((((msb as u32) << 16) | ((lsb as u32) << 8) | (xlsb as u32)) >> (8-self.params.oversampling as u32))
     }
 
-    fn calculate_b5(&self, uncompensated_temp: u16) -> i32
-    {
-        self.params.calculate_b5(uncompensated_temp)
-    }
     pub fn calculate_real_temp(&self, uncompensated_temp: u16) -> i16
     {
         self.params.calculate_real_temp(uncompensated_temp)
@@ -209,41 +212,40 @@ impl Bmp085
     {
         self.params.calcuate_real_pressure(uncompensated_temp, uncompensated_pressure)
     }
+
+    pub fn print_params(&self)
+    {
+        println!("Params: {:?}", self.params);
+    }
 }
 
 fn main() {
-    let params = Bmp085Parameters::default();
+    let sensor_addr = 0x77;
 
-    let ut = 27898;
-    let up = 23843;
+    let device = LinuxI2CDevice::new("/dev/i2c-1", sensor_addr).unwrap();
 
-    println!("temp: {}", params.calculate_real_temp(ut));
-    println!("pres: {}", params.calcuate_real_pressure(ut, up));
-    //let SENSOR_ADDR = 0x77;
+    let mut bmp085 = Bmp085::init(device).unwrap();
 
-    //let device = LinuxI2CDevice::new("/dev/i2c-1", SENSOR_ADDR).unwrap();
+    bmp085.print_params();
 
-    //let mut bmp085 = Bmp085::with_defaults(device).unwrap();
+    let uncompensated_temp = bmp085.read_uncompensated_temp().unwrap();
+    let uncompensated_pressure = bmp085.read_uncompensated_pressure().unwrap();
+    println!("Uncompensated: {}, UTTemp {}",
+             uncompensated_temp,
+             bmp085.calculate_real_temp(uncompensated_temp)
+            );
+    println!("utpres {}", uncompensated_pressure);
+    println!("UTPres {}, pressure: {}hpa", 
+             uncompensated_pressure,
+             bmp085.calcuate_real_pressure(uncompensated_temp, uncompensated_pressure)
+            );
 
-    //let uncompensated_temp = bmp085.read_uncompensated_temp().unwrap();
-    //// let uncompensated_pressure = bmp085.read_uncompensated_pressure().unwrap();
-    //let uncompensated_temp = 27898;
-    //let uncompensated_pressure = 23843;
-    //println!("Uncompensated: {}, UTTemp {}",
-    //         uncompensated_temp,
-    //         bmp085.calculate_real_temp(uncompensated_temp)
-    //        );
-    //println!("UTPres {}, pressure: {}hpa", 
-    //         uncompensated_pressure,
-    //         bmp085.calcuate_real_pressure(uncompensated_temp, uncompensated_pressure)
-    //         );
-
-    //println!("Hello world");
+    println!("Hello world");
 }
 
 
 #[cfg(test)]
-mod Bmp085Test
+mod bmp085_test
 {
     use super::*;
 
