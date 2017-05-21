@@ -26,11 +26,8 @@ pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
     let reference_pressure = pressure;
 
     let mut previous_pressures = VecDeque::with_capacity(8);
-    for _ in 0..8
-    {
-        previous_pressures.push_back(0);
-    }
 
+    let avg_sample_amount = 8;
     loop
     {
         //Read a reference value
@@ -39,7 +36,10 @@ pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
         let pressure = bmp085.calcuate_real_pressure(uncompensated_temp, uncompensated_pressure);
 
         //Store a new value for the average calculation
-        previous_pressures.pop_front();
+        if previous_pressures.len() > avg_sample_amount
+        {
+            previous_pressures.pop_front();
+        }
         previous_pressures.push_back(pressure);
 
         //Calculate the average pressure
@@ -48,12 +48,12 @@ pub fn pressure_logger(mut bmp085: bmp085::Bmp085)
         {
             sum += previous_pressures[i];
         }
-        let average = sum / previous_pressures.len() as i32;
+        let average = sum / (previous_pressures.len() as i32);
 
         let altitude = bmp085::altitude_from_pressure(pressure, reference_pressure);
         let avg_altitude = bmp085::altitude_from_pressure(average, reference_pressure);
 
-        let result_string = format!("{}\"p\": {}, \"avg_t\": {}, \"alt\": {}, \"avg_alt\":{}{},",
+        let result_string = format!("{}\"p\": {}, \"avg_p\": {}, \"alt\": {}, \"avg_alt\":{}{},",
                         "{",
                         pressure,
                         average,

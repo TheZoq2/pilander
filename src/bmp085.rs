@@ -136,7 +136,7 @@ impl Bmp085
                 {
                     // For some reason, oversampling=0 does not give the correct
                     // pressure value
-                    oversampling: 1,
+                    oversampling: 3,
 
                     ac1,
                     ac2,
