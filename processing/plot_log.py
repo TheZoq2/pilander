@@ -37,19 +37,20 @@ def main():
         pressure[i] = data[i]["p"]
         avg_pressure[i] = data[i]["avg_p"]
 
-    smoothed = np.convolve(altitude, np.ones(8), mode="valid") / 8
+    smoothed = np.convolve(altitude, np.ones(16), mode="valid") / 16
+
     velocity = np.empty(len(smoothed))
 
-    for i in range(0, len(smoothed) - 5):
-        velocity[i] = smoothed[i + 5] - smoothed[i]
+    for i in range(1, len(velocity)):
+        velocity[i] = smoothed[i]-smoothed[i-1]
 
     f, axis = plot.subplots(2, sharex=True)
     axis[0].grid()
     axis[0].plot(altitude)
     axis[0].plot(smoothed)
-    axis[0].plot(velocity)
     #axis[0].plot(avg_altitude)
-    axis[1].plot(pressure)
+    axis[1].plot(velocity)
+    axis[1].plot(np.convolve(velocity, np.ones(16), mode='valid') / 16)
     #axis[1].plot(avg_pressure)
 
     plot.show()
