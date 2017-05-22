@@ -86,7 +86,10 @@ fn test_bno()
     println!("Bno status: 0x{:X}, {:?}", status.status, status.error);
 
     loop {
-        println!("{:?}", bno.get_gravity_vector().unwrap());
+        println!("heading: {}",
+                 bno.get_euler_vector().unwrap(),
+                 //bno.get_gravity_vector().unwrap()
+                );
         thread::sleep(Duration::from_millis(100))
     }
 }
