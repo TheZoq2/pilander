@@ -11,6 +11,11 @@ import json
 
 
 
+def calculate_noise(raw, smoothed):
+    noise = raw[:len(smoothed)] - smoothed;
+
+    return np.average(np.abs(noise))
+
 def main():
     if len(sys.argv) != 2:
         print("Please specify an input filename")
@@ -31,7 +36,6 @@ def main():
     avg_pressure = np.empty(len(data))
 
     for i in range(len(data)):
-        print("Altitude: ", data[i]['alt'], "average: ", data[i]["avg_alt"])
         altitude[i] = data[i]["alt"]
         avg_altitude[i] = data[i]["avg_alt"]
         pressure[i] = data[i]["p"]
@@ -39,18 +43,20 @@ def main():
 
     smoothed = np.convolve(altitude, np.ones(16), mode="valid") / 16
 
+    print("Average noise: {}".format(calculate_noise(altitude, smoothed)));
+
     velocity = np.empty(len(smoothed))
 
     for i in range(1, len(velocity)):
-        velocity[i] = smoothed[i]-smoothed[i-1]
+        velocity[i] = smoothed[i]-smoothed[i-20]
 
     f, axis = plot.subplots(2, sharex=True)
-    axis[0].grid()
     axis[0].plot(altitude)
+    axis[0].plot(avg_altitude)
     axis[0].plot(smoothed)
     #axis[0].plot(avg_altitude)
     axis[1].plot(velocity)
-    axis[1].plot(np.convolve(velocity, np.ones(16), mode='valid') / 16)
+    axis[1].plot(np.convolve(velocity, np.ones(32), mode='valid') / 32)
     #axis[1].plot(avg_pressure)
 
     plot.show()
